@@ -1,0 +1,38 @@
+{
+  "assets": [
+    {
+      "name": "release-manifest.json",
+      "sha256": "ca8e04fa54e4813cc8fc679246ec3beb75c17bfe12f466366477fffc962f18c8",
+      "size_bytes": 439
+    },
+    {
+      "name": "SHA256SUMS",
+      "sha256": "51617383cd9ef1888b9c73f959c1618f4ce7246ba11e230c299dc1ea0882ed6b",
+      "size_bytes": 100
+    },
+    {
+      "name": "scc_runner-0.3.0-py3-none-any.whl",
+      "sha256": "5e86ee0cb94d9c66dfd79d24d6c8815773082ca13c5cef20268e161f52b053b9",
+      "size_bytes": 112417
+    }
+  ],
+  "distribution": {
+    "parent_commit": "5d399f46bb211ea282d2953944eb23ea2f7c5dbb",
+    "repository": "Tascapirata/scc-releases"
+  },
+  "guide": {
+    "path": "docs/your-first-verified-claim.md",
+    "sha256": "eb51c4bda0e6bf8e49dce9cb337117df2d0577d34999256dbe06b38f9f6c3f2e"
+  },
+  "package": {
+    "name": "scc-runner",
+    "version": "0.3.0"
+  },
+  "product": "SCC Runner",
+  "schema_version": 1,
+  "source": {
+    "commit": "33ef5cd80757c88d80070dc60f01aff0d1a839d0",
+    "repository": "Tascapirata/scc-runner",
+    "visibility": "private"
+  }
+}
