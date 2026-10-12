@@ -11,6 +11,7 @@ from email.parser import Parser
 from pathlib import Path
 import re
 import shutil
+import stat
 import subprocess
 import sys
 from zipfile import BadZipFile, ZipFile
@@ -18,6 +19,17 @@ from zipfile import BadZipFile, ZipFile
 
 class InstallerError(RuntimeError):
     pass
+
+
+VERSION_PATTERN = re.compile(
+    r"(?:0|[1-9][0-9]*)\.(?:0|[1-9][0-9]*)\.(?:0|[1-9][0-9]*)\Z"
+)
+
+
+def validate_expected_version(value: str) -> str:
+    if not isinstance(value, str) or not VERSION_PATTERN.fullmatch(value):
+        raise InstallerError("expected version must be a semantic version component")
+    return value
 
 
 def lexists(path: Path) -> bool:
@@ -192,6 +204,7 @@ def verify_bundle(
     bundle: Path,
     expected_version: str,
 ) -> tuple[dict,Path,str]:
+    validate_expected_version(expected_version)
     manifest_path=(
         bundle
         / "release-manifest.json"
@@ -501,6 +514,52 @@ def ensure_activation_slots(
             )
 
 
+def validate_release_path(data_root: Path, release_dir: Path) -> None:
+    releases = (data_root / "releases").absolute()
+    if release_dir.parent.parent != releases:
+        raise InstallerError("release path is outside managed releases")
+    for component in (releases, release_dir.parent, release_dir):
+        if lexists(component) and component.is_symlink():
+            raise InstallerError("release path contains unmanaged symlink")
+
+
+def copy_verified_wheel(source: Path, destination: Path, expected_sha: str) -> None:
+    flags = os.O_RDONLY | getattr(os, "O_CLOEXEC", 0) | getattr(os, "O_NOFOLLOW", 0)
+    source_fd = os.open(source, flags)
+    destination_fd = -1
+    try:
+        source_stat = os.fstat(source_fd)
+        if not stat.S_ISREG(source_stat.st_mode):
+            raise InstallerError("wheel source is not a regular file")
+        destination.parent.mkdir(parents=True, exist_ok=True)
+        destination_fd = os.open(
+            destination,
+            os.O_WRONLY
+            | os.O_CREAT
+            | os.O_EXCL
+            | getattr(os, "O_CLOEXEC", 0)
+            | getattr(os, "O_NOFOLLOW", 0),
+            0o600,
+        )
+        digest = hashlib.sha256()
+        with os.fdopen(source_fd, "rb") as source_handle, os.fdopen(destination_fd, "wb") as destination_handle:
+            source_fd = -1
+            destination_fd = -1
+            for chunk in iter(lambda: source_handle.read(1024 * 1024), b""):
+                digest.update(chunk)
+                destination_handle.write(chunk)
+            destination_handle.flush()
+            os.fsync(destination_handle.fileno())
+        if digest.hexdigest() != expected_sha:
+            destination.unlink(missing_ok=True)
+            raise InstallerError("wheel changed after verification")
+    finally:
+        if source_fd >= 0:
+            os.close(source_fd)
+        if destination_fd >= 0:
+            os.close(destination_fd)
+
+
 def run_checked(
     argv: list[str],
 ) -> str:
@@ -718,8 +777,11 @@ def install_bundle(
         / expected_version
         / digest
     )
+    validate_release_path(data_root, release_dir)
 
-    if release_dir.exists():
+    if lexists(release_dir):
+        if release_dir.is_symlink() or not release_dir.is_dir():
+            raise InstallerError("unmanaged release path")
         smoke(
             release_dir,
             expected_version,
@@ -753,6 +815,9 @@ def install_bundle(
             / "venv"
         )
 
+        staged_wheel = stage / wheel.name
+        copy_verified_wheel(wheel, staged_wheel, digest)
+
         run_checked(
             [
                 sys.executable,
@@ -777,7 +842,7 @@ def install_bundle(
                 "--disable-pip-version-check",
                 "--no-index",
                 "--no-deps",
-                str(wheel),
+                str(staged_wheel),
             ]
         )
 
