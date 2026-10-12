@@ -1,4 +1,4 @@
-# SCC Runner Free 0.3.0 — Your First Verified Claim
+# SCC Runner Free 0.3.1 — Your First Verified Claim
 
 This guide uses the supported local Free path. It does not require a Control
 Plane, enrollment, S5-C, billing, or Managed.
@@ -10,7 +10,7 @@ service; it does not start, stop, restart, or modify it.
 
 - Linux or WSL with a readable systemd user/system authority.
 - Python 3.11 or newer.
-- The verified SCC Runner 0.3.0 wheel.
+- The verified SCC Runner 0.3.1 wheel.
 - A systemd service name that you are allowed to observe, such as
   `cron.service`.
 
@@ -24,14 +24,14 @@ From the directory containing the wheel:
 ```bash
 python3 -m venv .venv
 . .venv/bin/activate
-python -m pip install --no-index --no-deps ./scc_runner-0.3.0-py3-none-any.whl
+python -m pip install --no-index --no-deps ./scc_runner-0.3.1-py3-none-any.whl
 scc --version
 ```
 
 Expected version output:
 
 ```text
-scc 0.3.0
+scc 0.3.1
 ```
 
 ## C. Choose a service
